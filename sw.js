@@ -1,0 +1,6 @@
+const CACHE='mtr-reminder-local-v1';
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','./index.html'])).then(()=>self.skipWaiting())));
+self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
+self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(fetch(event.request).catch(()=>caches.match(event.request).then(r=>r||caches.match('./index.html'))));});
+self.addEventListener('message',event=>{const d=event.data||{};if(d.type!=='MTR_LOCAL_ALERT')return;event.waitUntil(self.registration.showNotification(d.title||'港鐵落車提醒',{body:d.body||'',icon:'./icon-192.png',badge:'./icon-192.png',tag:d.tag||'mtr-local-alert',renotify:true,vibrate:[300,120,300,120,500],requireInteraction:true,silent:false}));});
+self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>{const c=list.find(x=>'focus'in x);return c?c.focus():clients.openWindow('./')}));});
