@@ -8,6 +8,8 @@
 
 資料來源：香港鐵路有限公司 Next Train API：<https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php>。程式不使用 Web Push、Cloudflare Worker 或外部訂閱服務；頁面內的 Service Worker 只負責本機通知顯示。瀏覽器需要 HTTPS 或 localhost 才能使用定位及系統通知；地下、鎖屏、省電模式及瀏覽器策略可能影響本地計時，實際乘車應以車站廣播及列車顯示為準。
 
+程式已包含 192×192 及 512×512 的「列車＋提示鐘」PWA 圖示、manifest 與 Apple Touch Icon。手機若已安裝舊版到主畫面，請先移除舊捷徑，再由更新後網站使用「加入主畫面」重新安裝，確保手機採用新圖示。
+
 本地預覽：
 
 ```bash
