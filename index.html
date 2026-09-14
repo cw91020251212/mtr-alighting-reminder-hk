@@ -38,7 +38,7 @@
       <button class="button primary" id="start">開始靜默追蹤</button>
       <button class="button stop" id="stop" disabled>停止追蹤</button>
     </div>
-    <button class="screen-saver-launch" id="screenSaverBtn">🚌 營幕保護 · 追蹤時閒置 45 秒自動開啟</button>
+    <button class="screen-saver-launch" id="screenSaverBtn">🚆 營幕保護 · 追蹤時閒置 45 秒自動開啟</button>
     <div class="tracking-feedback" id="trackingFeedback" role="status">尚未開始追蹤。按「開始靜默追蹤」後，程式會等待第一個確認到達的車站。</div>
     <p class="locate-note">需要在地圖揀起點、終點或提示站？按下方「全網揀站圖」。</p>
   </section>
@@ -86,7 +86,7 @@
 </aside>
 <div class="toast" id="toast"></div>
 <div class="screen-saver hidden" id="screenSaver" role="button" tabindex="0" aria-label="營幕保護模式，輕觸返回行程畫面">
-  <div class="screen-saver-bus" id="screenSaverBus" aria-hidden="true">🚌</div>
+  <div class="screen-saver-bus" id="screenSaverBus" aria-hidden="true">🚆</div>
   <div class="screen-saver-hint">營幕保護中 · 輕觸返回行程</div>
 </div>
 
@@ -113,7 +113,7 @@ function stationName(code){return network.stationNames[code]||code}
 function now(){return new Date().toLocaleTimeString('zh-HK',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 function toast(msg){const e=$('toast');e.textContent=msg;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),3600)}
 function screenSaverDelayLabel(ms){return ms===0?'只限手動':ms<60000?`${ms/1000} 秒`:`${ms/60000} 分鐘`}
-function updateScreenSaverControls(){const delay=Number(settings.screenSaverIdle);$('screenSaverDelay').value=String(delay);$('screenSaverBtn').textContent=delay===0?'🚌 營幕保護 · 只限手動開啟':`🚌 營幕保護 · 追蹤時閒置 ${screenSaverDelayLabel(delay)}自動開啟`}
+function updateScreenSaverControls(){const delay=Number(settings.screenSaverIdle);$('screenSaverDelay').value=String(delay);$('screenSaverBtn').textContent=delay===0?'🚆 營幕保護 · 只限手動開啟':`🚆 營幕保護 · 追蹤時閒置 ${screenSaverDelayLabel(delay)}自動開啟`}
 async function requestWakeLock(){if(!('wakeLock'in navigator)||wakeLock||(!journey?.active&&!screenSaverActive))return;try{wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null})}catch{}}
 async function releaseWakeLock(){if(!wakeLock)return;const lock=wakeLock;wakeLock=null;try{await lock.release()}catch{}}
 function moveScreenSaverBus(){if(!screenSaverActive)return;const bus=$('screenSaverBus'),padding=22,maxX=Math.max(0,innerWidth-bus.offsetWidth-padding*2),maxY=Math.max(0,innerHeight-bus.offsetHeight-padding*2),x=Math.round(padding+Math.random()*maxX),y=Math.round(padding+Math.random()*maxY),direction=Math.random()>.5?1:-1;bus.style.transform=`translate3d(${x}px,${y}px,0) scaleX(${direction})`}
