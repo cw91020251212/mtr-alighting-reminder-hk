@@ -1,13 +1,13 @@
 {
-  "name": "港鐵落車提醒",
+  "name": "港鐵終點提醒",
   "short_name": "港鐵提醒",
-  "description": "香港港鐵全網絡轉乘及本地落車提醒器",
+  "description": "手機優先的港鐵終點靜默追蹤：中途只記錄，終點前一站才提醒。",
   "lang": "zh-Hant-HK",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f2f6f8",
-  "theme_color": "#173b68",
+  "background_color": "#f3f7fb",
+  "theme_color": "#0f3159",
   "icons": [
     {"src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
     {"src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
