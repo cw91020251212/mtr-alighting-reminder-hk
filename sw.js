@@ -1,5 +1,5 @@
-const CACHE='mtr-destination-silent-v3';
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','./index.html','./mtr-network.js','./manifest.json','./icon-192.png','./icon-512.png'])).then(()=>self.skipWaiting())));
+const CACHE='mtr-smart-alert-map-v4';
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','./index.html','./mtr-network.js','./manifest.json','./icon-192.png','./icon-512.png','./vendor/leaflet.css','./vendor/leaflet.js'])).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(fetch(event.request).catch(()=>caches.match(event.request).then(r=>r||caches.match('./index.html'))));});
 self.addEventListener('message',event=>{const d=event.data||{};if(d.type!=='MTR_LOCAL_ALERT')return;event.waitUntil(self.registration.showNotification(d.title||'港鐵落車提醒',{body:d.body||'',icon:'./icon-192.png',badge:'./icon-192.png',tag:d.tag||'mtr-local-alert',renotify:true,vibrate:[300,120,300,120,500],requireInteraction:true,silent:false}));});
