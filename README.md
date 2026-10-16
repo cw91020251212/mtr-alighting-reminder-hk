@@ -38,3 +38,12 @@
 
 - [港鐵 Lines and Stations 開放資料](https://opendata.mtr.com.hk/data/mtr_lines_and_stations.csv)
 - [港鐵行程指南](https://www.mtr.com.hk/ch/customer/jp/index.php)
+
+---
+
+<!-- project-status-and-license-notice -->
+## 專案狀態與授權
+
+本專案由個人維護，主要用於個人實驗、學習與測試。部分版本可能公開展示或部署供體驗，但功能、資料及部署可能不完整或變更；請在實際依賴前自行核實，不構成任何第三方背書。
+
+本倉庫的原創程式碼、文件及專案素材只授權個人本機評估與測試；未經著作權人事先書面許可，不得公開鏡像、公開再發佈、散佈或再授權。詳情及第三方材料的範圍見 [`LICENSE`](LICENSE)；第三方程式、資料、圖片、商標及來源材料仍受其各自授權與條款約束。
