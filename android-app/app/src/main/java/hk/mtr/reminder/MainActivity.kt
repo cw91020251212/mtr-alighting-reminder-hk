@@ -111,7 +111,6 @@ class MainActivity : Activity() {
                 var original=window.saveJourney;
                 window.saveJourney=function(){var result=original.apply(this,arguments);try{var state=localStorage.getItem(key);if(state)AndroidMtrAlarm.syncJourney(state)}catch(e){}return result};
               }
-              if(window.systemAlert)window.systemAlert=function(){};
               try{var saved=localStorage.getItem(key);if(saved)AndroidMtrAlarm.syncJourney(saved)}catch(e){}
             })();
         """
