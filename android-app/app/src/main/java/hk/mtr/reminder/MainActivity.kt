@@ -8,6 +8,7 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.RingtoneManager
 import android.media.ToneGenerator
+import android.speech.tts.TextToSpeech
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -22,14 +23,26 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.app.ActivityCompat
 import org.json.JSONObject
+import java.util.Locale
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
     private var pendingJourney: String? = null
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         createChannels()
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val cantonese = tts?.setLanguage(Locale.forLanguageTag("yue-HK"))
+                if (cantonese == TextToSpeech.LANG_MISSING_DATA || cantonese == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    tts?.setLanguage(Locale.forLanguageTag("zh-HK"))
+                }
+                ttsReady = true
+            }
+        }
         web = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
@@ -110,6 +123,25 @@ class MainActivity : Activity() {
         if (web.canGoBack()) web.goBack() else super.onBackPressed()
     }
 
+    override fun onDestroy() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
+        super.onDestroy()
+    }
+
+    private fun speak(text: String) {
+        if (ttsReady && text.isNotBlank()) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "mtr-voice-${System.currentTimeMillis()}")
+    }
+
+    private fun playTestTone() {
+        runCatching {
+            val tone = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+            tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 500)
+            Handler(Looper.getMainLooper()).postDelayed({ tone.release() }, 700)
+        }
+    }
+
     inner class AndroidMtrAlarm {
         @JavascriptInterface fun syncJourney(json: String) { runOnUiThread { this@MainActivity.syncJourney(json) } }
         @JavascriptInterface fun playAlarm() {
@@ -119,6 +151,13 @@ class MainActivity : Activity() {
                     tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 900)
                     Handler(Looper.getMainLooper()).postDelayed({ tone.release() }, 1100)
                 }
+            }
+        }
+        @JavascriptInterface fun speak(text: String) { runOnUiThread { this@MainActivity.speak(text) } }
+        @JavascriptInterface fun testVoice(text: String) {
+            runOnUiThread {
+                playTestTone()
+                Handler(Looper.getMainLooper()).postDelayed({ speak(text) }, 550)
             }
         }
     }
@@ -137,6 +176,11 @@ class MainActivity : Activity() {
               }
               if(window.systemAlert && window.AndroidMtrAlarm){
                 window.systemAlert=function(){AndroidMtrAlarm.playAlarm();try{navigator.vibrate&&navigator.vibrate([250,100,250,100,500])}catch(e){}};
+              }
+              if(window.speakCantonese && window.AndroidMtrAlarm){
+                window.speakCantonese=function(text){AndroidMtrAlarm.speak(text)};
+                var test=document.getElementById('testVoice');
+                if(test)test.onclick=function(){AndroidMtrAlarm.testVoice('港鐵終點提醒，粵語語音測試成功。')};
               }
               try{var saved=localStorage.getItem(key);if(saved)AndroidMtrAlarm.syncJourney(saved)}catch(e){}
             })();
