@@ -39,6 +39,10 @@ class MainActivity : Activity() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     return request.url.host != WEB_HOST
                 }
+
+                override fun onPageFinished(view: WebView, url: String) {
+                    if (url.startsWith(WEB_ORIGIN)) view.evaluateJavascript(NATIVE_BRIDGE_SCRIPT, null)
+                }
             }
             loadUrl("$WEB_ORIGIN/mtr-alighting-reminder-hk/?android=1")
         }
@@ -100,5 +104,16 @@ class MainActivity : Activity() {
         const val REQUEST_PERMISSIONS = 40
         const val WEB_HOST = "cw91020251212.github.io"
         const val WEB_ORIGIN = "https://$WEB_HOST"
+        const val NATIVE_BRIDGE_SCRIPT = """
+            (function(){
+              var key='mtr-smart-alert-web-v4';
+              if(window.saveJourney && window.saveJourney.toString().indexOf('AndroidMtrAlarm')<0){
+                var original=window.saveJourney;
+                window.saveJourney=function(){var result=original.apply(this,arguments);try{var state=localStorage.getItem(key);if(state)AndroidMtrAlarm.syncJourney(state)}catch(e){}return result};
+              }
+              if(window.systemAlert)window.systemAlert=function(){};
+              try{var saved=localStorage.getItem(key);if(saved)AndroidMtrAlarm.syncJourney(saved)}catch(e){}
+            })();
+        """
     }
 }
