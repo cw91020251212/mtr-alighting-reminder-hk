@@ -4,10 +4,16 @@ import android.Manifest
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.RingtoneManager
+import android.media.ToneGenerator
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -28,6 +34,7 @@ class MainActivity : Activity() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.setGeolocationEnabled(true)
+            settings.mediaPlaybackRequiresUserGesture = false
             settings.userAgentString += " MTRReminderAndroid/1.0"
             addJavascriptInterface(AndroidMtrAlarm(), "AndroidMtrAlarm")
             webChromeClient = object : WebChromeClient() {
@@ -87,7 +94,15 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 26) {
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(NotificationChannel(MtrTrackingService.TRACK_CHANNEL, "背景行程追蹤", NotificationManager.IMPORTANCE_LOW))
-            manager.createNotificationChannel(NotificationChannel(ALERT_CHANNEL, "落車提示", NotificationManager.IMPORTANCE_HIGH).apply { enableVibration(true) })
+            val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val audio = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            manager.createNotificationChannel(NotificationChannel(ALERT_CHANNEL, "落車提示（有聲）", NotificationManager.IMPORTANCE_HIGH).apply {
+                enableVibration(true)
+                setSound(sound, audio)
+            })
         }
     }
 
@@ -97,10 +112,19 @@ class MainActivity : Activity() {
 
     inner class AndroidMtrAlarm {
         @JavascriptInterface fun syncJourney(json: String) { runOnUiThread { this@MainActivity.syncJourney(json) } }
+        @JavascriptInterface fun playAlarm() {
+            runOnUiThread {
+                runCatching {
+                    val tone = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+                    tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 900)
+                    Handler(Looper.getMainLooper()).postDelayed({ tone.release() }, 1100)
+                }
+            }
+        }
     }
 
     companion object {
-        const val ALERT_CHANNEL = "mtr_arrival"
+        const val ALERT_CHANNEL = "mtr_arrival_sound_v2"
         const val REQUEST_PERMISSIONS = 40
         const val WEB_HOST = "cw91020251212.github.io"
         const val WEB_ORIGIN = "https://$WEB_HOST"
@@ -110,6 +134,9 @@ class MainActivity : Activity() {
               if(window.saveJourney && window.saveJourney.toString().indexOf('AndroidMtrAlarm')<0){
                 var original=window.saveJourney;
                 window.saveJourney=function(){var result=original.apply(this,arguments);try{var state=localStorage.getItem(key);if(state)AndroidMtrAlarm.syncJourney(state)}catch(e){}return result};
+              }
+              if(window.systemAlert && window.AndroidMtrAlarm){
+                window.systemAlert=function(){AndroidMtrAlarm.playAlarm();try{navigator.vibrate&&navigator.vibrate([250,100,250,100,500])}catch(e){}};
               }
               try{var saved=localStorage.getItem(key);if(saved)AndroidMtrAlarm.syncJourney(saved)}catch(e){}
             })();
