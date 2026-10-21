@@ -11,6 +11,9 @@ import android.media.ToneGenerator
 import android.speech.tts.TextToSpeech
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -25,14 +28,17 @@ import androidx.core.app.ActivityCompat
 import org.json.JSONObject
 import java.util.Locale
 
-class MainActivity : Activity() {
+class MainActivity : Activity(), LocationListener {
     private lateinit var web: WebView
+    private lateinit var locations: LocationManager
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var pageReady = false
     private var pendingJourney: String? = null
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
+        locations = getSystemService(LocationManager::class.java)
         createChannels()
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
@@ -61,7 +67,10 @@ class MainActivity : Activity() {
                 }
 
                 override fun onPageFinished(view: WebView, url: String) {
-                    if (url.startsWith(WEB_ORIGIN)) view.evaluateJavascript(NATIVE_BRIDGE_SCRIPT, null)
+                    if (url.startsWith(WEB_ORIGIN)) {
+                        pageReady = true
+                        view.evaluateJavascript(NATIVE_BRIDGE_SCRIPT, null)
+                    }
                 }
             }
             loadUrl("$WEB_ORIGIN/mtr-alighting-reminder-hk/?android=1")
@@ -90,6 +99,7 @@ class MainActivity : Activity() {
         val journey = runCatching { JSONObject(json) }.getOrNull() ?: return
         val intent = Intent(this, MtrTrackingService::class.java)
         if (!journey.optBoolean("active")) {
+            stopUiLocation()
             intent.action = MtrTrackingService.ACTION_STOP
             startService(intent)
             return
@@ -123,6 +133,51 @@ class MainActivity : Activity() {
         if (web.canGoBack()) web.goBack() else super.onBackPressed()
     }
 
+    override fun onPause() {
+        stopUiLocation()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (pageReady) web.evaluateJavascript("if(typeof journey!=='undefined'&&journey?.active)AndroidMtrAlarm.startUiLocation()", null)
+    }
+
+    private fun startUiLocation() {
+        stopUiLocation()
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            web.evaluateJavascript("journey.message='尚未授予定位權限，請到 Android 設定允許精確位置。';renderAll()", null)
+            requestRuntimePermissions()
+            return
+        }
+        var requested = false
+        for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+            if (runCatching { locations.isProviderEnabled(provider) }.getOrDefault(false)) {
+                runCatching {
+                    locations.getLastKnownLocation(provider)?.let(::onLocationChanged)
+                    locations.requestLocationUpdates(provider, 2000L, 0f, this, Looper.getMainLooper())
+                    requested = true
+                }
+            }
+        }
+        if (!requested) web.evaluateJavascript("journey.message='手機的位置服務未開啟，請開啟 GPS／定位服務。';renderAll()", null)
+        else web.evaluateJavascript("journey.message='Android 原生定位已啟動，正在取得 GPS 位置…';renderAll()", null)
+    }
+
+    private fun stopUiLocation() { runCatching { locations.removeUpdates(this) } }
+
+    override fun onLocationChanged(location: Location) {
+        if (::web.isInitialized && pageReady) {
+            web.evaluateJavascript("if(typeof processLocation==='function')processLocation(${location.latitude},${location.longitude},${location.accuracy})", null)
+        }
+    }
+
+    override fun onProviderDisabled(provider: String) {
+        if (::web.isInitialized && pageReady) web.evaluateJavascript("journey.message='手機定位服務已關閉，請開啟 GPS／定位服務。';renderAll()", null)
+    }
+
+    override fun onProviderEnabled(provider: String) { }
+
     override fun onDestroy() {
         tts?.stop()
         tts?.shutdown()
@@ -144,6 +199,8 @@ class MainActivity : Activity() {
 
     inner class AndroidMtrAlarm {
         @JavascriptInterface fun syncJourney(json: String) { runOnUiThread { this@MainActivity.syncJourney(json) } }
+        @JavascriptInterface fun startUiLocation() { runOnUiThread { this@MainActivity.startUiLocation() } }
+        @JavascriptInterface fun stopUiLocation() { runOnUiThread { this@MainActivity.stopUiLocation() } }
         @JavascriptInterface fun playAlarm() {
             runOnUiThread {
                 runCatching {
@@ -181,6 +238,12 @@ class MainActivity : Activity() {
                 window.speakCantonese=function(text){AndroidMtrAlarm.speak(text)};
                 var test=document.getElementById('testVoice');
                 if(test)test.onclick=function(){AndroidMtrAlarm.testVoice('港鐵終點提醒，粵語語音測試成功。')};
+              }
+              if(window.startWatch && window.AndroidMtrAlarm){
+                window.startWatch=function(){AndroidMtrAlarm.startUiLocation()};
+                var stop=window.stop;
+                window.stop=function(){AndroidMtrAlarm.stopUiLocation();return stop.apply(this,arguments)};
+                try{if(typeof journey!=='undefined'&&journey?.active)AndroidMtrAlarm.startUiLocation()}catch(e){}
               }
               try{var saved=localStorage.getItem(key);if(saved)AndroidMtrAlarm.syncJourney(saved)}catch(e){}
             })();
